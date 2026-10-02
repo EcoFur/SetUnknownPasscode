@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>随机走位序列生成器</title>
+<style>
+  :root{
+    --bg:#0d1020;
+    --card:#161a2e;
+    --card-2:#1c2138;
+    --line:#2a3050;
+    --fg:#e8eaf6;
+    --muted:#8a92b2;
+    --accent:#5b8cff;
+    --green:#22d3a6;
+    --orange:#ffb020;
+    --purple:#c084fc;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    padding:32px 16px 72px;
+    /* background: */
+      /* radial-gradient(900px 500px at 15% -10%, #1d2758 0%, transparent 55%), */
+      /* radial-gradient(700px 400px at 100% 0%, #14324a 0%, transparent 50%), */
+      /* var(--bg); */
+    color:var(--fg);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{width:100%;max-width:880px;}
+  header{margin-bottom:24px;}
+  h1{
+    margin:0 0 8px;
+    font-size:26px;
+    letter-spacing:.5px;
+    background:linear-gradient(90deg,#8ab4ff,#22d3a6);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .sub{margin:0;color:var(--muted);font-size:13.5px;line-height:1.8;}
+  .sub code{
+    background:var(--card-2);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:1px 6px;
+    font-size:12.5px;
+    color:#b9c2e6;
+  }
+  .card{
+    background:linear-gradient(180deg,var(--card) 0%, #141829 100%);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:18px;
+    box-shadow:0 12px 32px rgba(0,0,0,.35);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;
+  }
+  .field{display:flex;flex-direction:column;gap:7px;}
+  .field span{font-size:12.5px;color:var(--muted);letter-spacing:.3px;}
+  input[type=number]{
+    width:100%;
+    padding:10px 12px;
+    border-radius:9px;
+    border:1px solid var(--line);
+    background:#0f1324;
+    color:var(--fg);
+    font-size:15px;
+    font-variant-numeric:tabular-nums;
+    outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input[type=number]:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(0, 230, 251, 0.18);
+  }
+  input::placeholder{color:#565f80;}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+  .btn{
+    appearance:none;
+    border:1px solid var(--line);
+    background:var(--card-2);
+    color:var(--fg);
+    padding:10px 20px;
+    border-radius:9px;
+    font-size:14px;
+    cursor:pointer;
+    transition:transform .08s, background .15s, border-color .15s, opacity .15s;
+  }
+  .btn:hover{background:#232a45;border-color:#3b4468;}
+  .btn:active{transform:translateY(1px);}
+  .btn.primary{
+    background:linear-gradient(135deg,#4a7dff,#3a63e0);
+    border-color:#4a7dff;
+    font-weight:600;
+    box-shadow:0 6px 18px rgba(74,125,255,.3);
+  }
+  .btn.primary:hover{background:linear-gradient(135deg,#5c8bff,#4570ea);}
+  .btn.ghost{background:transparent;}
+  .outhead{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+    font-size:12.5px;
+    color:var(--muted);
+    letter-spacing:.4px;
+  }
+  .stat{font-variant-numeric:tabular-nums;}
+  .out{
+    margin:0;
+    min-height:96px;
+    max-height:340px;
+    overflow:auto;
+    padding:14px 16px;
+    border-radius:10px;
+    background:#0c0f1d;
+    border:1px solid #232a45;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:15px;
+    line-height:2;
+    white-space:pre-wrap;
+    word-break:break-all;
+    color:#cfd6f2;
+  }
+  .out::-webkit-scrollbar{width:9px;height:9px;}
+  .out::-webkit-scrollbar-thumb{background:#2c3557;border-radius:5px;}
+  .out::-webkit-scrollbar-track{background:transparent;}
+  .tk.r{color:var(--green);}
+  .tk.l{color:var(--orange);}
+  .tk.p{color:var(--accent);font-weight:700;}
+  .tk.o{color:var(--purple);font-weight:700;}
+  .err{color:#ff6b81;font-size:13px;margin-top:10px;min-height:18px;}
+  @media (max-width:520px){
+    h1{font-size:21px;}
+    .card{padding:16px;}
+    .actions .btn{flex:1 1 auto;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- <header>
+    <h1>随机走位序列生成器</h1>
+    <p class="sub">
+      <code>O</code> 起点 / 终点 ·
+      <code>R n</code> 右移 n 格 ·
+      <code>L n</code> 左移 n 格 ·
+      <code>P</code> 按下
+    </p>
+  </header> -->
+
+  <section class="card">
+    <div class="grid">
+      <label class="field">
+        <span>密码位数</span>
+        <input id="in-b" type="number" min="0" max="1000" step="1" value="5">
+      </label>
+      <label class="field">
+        <span>每次按压前的步数</span>
+        <input id="in-s" type="number" min="1" max="1000" step="1" value="3">
+      </label>
+      <label class="field">
+        <span>“1”右侧键数</span>
+        <input id="in-lp" type="number" min="0" max="1000" step="1" placeholder="1">
+      </label>
+      <label class="field">
+        <span> “0”右侧键数</span>
+        <input id="in-rp" type="number" min="0" max="1000" step="1" placeholder="2">
+      </label>
+    </div>
+    <div class="actions">
+      <button id="btn-gen" class="btn primary">生成</button>
+      <button id="btn-copy" class="btn">复制结果</button>
+      <button id="btn-clear" class="btn ghost">清空</button>
+    </div>
+    <div id="err" class="err"></div>
+  </section>
+
+  <section class="card">
+    <div class="outhead">
+      <span>输出</span>
+      <span id="stat" class="stat">—</span>
+    </div>
+    <pre id="out" class="out"></pre>
+  </section>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  var inB   = $('in-b');
+  var inS   = $('in-s');
+  var inLp  = $('in-lp');
+  var inRp  = $('in-rp');
+  var outEl = $('out');
+  var statEl = $('stat');
+  var errEl  = $('err');
+
+  /* 闭区间随机整数，等价于 Python 的 random.randint(min, max) */
+  function randInt(min, max){
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  /* 读取输入框，空值用默认值，并做范围钳制 */
+  function readInt(el, def, min, max){
+    var raw = el.value.trim();
+    var n = (raw === '') ? def : parseInt(raw, 10);
+    if (!isFinite(n)) n = def;
+    n = Math.floor(n);
+    if (n < min) n = min;
+    if (n > max) n = max;
+    return n;
+  }
+
+  /* 核心算法：返回 token 数组 [{t:'R3', c:'r'}, ...] */
+  function generate(b, s, lp, rp){
+    var tokens = [];
+    var now = 0;
+
+    tokens.push({ t:'O', c:'o' });
+
+    for (var i = 0; i < b; i++){
+      /* 前 s-1 步：允许超出 0..9 的额外范围 */
+      for (var j = 0; j < s - 1; j++){
+        var r = 0;
+        while (r === 0){
+          r = randInt(-now - lp, 9 + rp - now);
+        }
+        if (r > 0){
+          tokens.push({ t:'R' + r, c:'r' });
+          now += r;
+        } else {
+          tokens.push({ t:'L' + (-r), c:'l' });
+          now += r;
+        }
+      }
+
+      /* 最后一步：必须落到 0..9 */
+      var last = 0;
+      while (last === 0){
+        last = randInt(-now, 9 - now);
+      }
+      if (last > 0){
+        tokens.push({ t:'R' + last, c:'r' });
+        now += last;
+      } else {
+        tokens.push({ t:'L' + (-last), c:'l' });
+        now += last;
+      }
+
+      tokens.push({ t:'P', c:'p' });
+    }
+
+    tokens.push({ t:'O', c:'o' });
+    return tokens;
+  }
+
+  function tokensToHtml(tokens){
+    var buf = [];
+    for (var i = 0; i < tokens.length; i++){
+      buf.push('<span class="tk ' + tokens[i].c + '">' + tokens[i].t + '</span>');
+    }
+    return buf.join('');
+  }
+
+  function tokensToText(tokens){
+    var buf = [];
+    for (var i = 0; i < tokens.length; i++) buf.push(tokens[i].t);
+    return buf.join('');
+  }
+
+  var lastText = '';
+
+  function run(){
+    errEl.textContent = '';
+    errEl.style.color = '';
+
+    var b  = readInt(inB,  0, 0, 1000);
+    var s  = readInt(inS,  1, 1, 1000);
+    var lp = readInt(inLp, 1, 0, 1000);
+    var rp = readInt(inRp, 2, 0, 1000);
+
+    var t0 = performance.now();
+    var tokens = generate(b, s, lp, rp);
+    var t1 = performance.now();
+
+    lastText = tokensToText(tokens);
+    outEl.innerHTML = tokensToHtml(tokens);
+    statEl.textContent = tokens.length + ' tokens · ' + lastText.length + ' 字符 · ' +
+                         (t1 - t0).toFixed(1) + ' ms';
+    outEl.scrollTop = 0;
+  }
+
+  function clearAll(){
+    lastText = '';
+    outEl.innerHTML = '';
+    statEl.textContent = '—';
+    errEl.textContent = '';
+    errEl.style.color = '';
+  }
+
+  function copyResult(){
+    if (!lastText){
+      errEl.textContent = '还没有可复制的结果，请先点击「生成」。';
+      return;
+    }
+
+    var done = function(){
+      errEl.style.color = '#22d3a6';
+      errEl.textContent = '已复制到剪贴板 ✓';
+      setTimeout(function(){
+        errEl.style.color = '';
+        errEl.textContent = '';
+      }, 1500);
+    };
+
+    var fail = function(){
+      /* 降级方案：自动选中输出内容，让用户手动复制 */
+      var range = document.createRange();
+      range.selectNodeContents(outEl);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      errEl.style.color = '';
+      errEl.textContent = '自动复制失败，已选中文本，请按 Ctrl/Cmd + C 手动复制。';
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(lastText).then(done, fail);
+    } else {
+      fail();
+    }
+  }
+
+  $('btn-gen').addEventListener('click', run);
+  $('btn-copy').addEventListener('click', copyResult);
+  $('btn-clear').addEventListener('click', clearAll);
+
+  /* 输入框里按回车直接生成 */
+  [inB, inS, inLp, inRp].forEach(function(el){
+    el.addEventListener('keydown', function(e){
+      if (e.key === 'Enter'){ e.preventDefault(); run(); }
+    });
+  });
+
+  /* 打开页面时先跑一次示例 */
+  run();
+})();
+</script>
+</body>
+</html>
